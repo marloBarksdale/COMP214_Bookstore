@@ -65,10 +65,18 @@ function App() {
       <div className="book-grid">
         {books.map(book => (
           <div key={book.ISBN} className="book-card">
-            <img src={`https://picsum.photos/200/300?random=${book.ISBN}`} alt={book.Title} />
-            <h3>{book.Title}</h3>
-            <p><strong>Category:</strong> {book.Category}</p>
-            <p><strong>Price:</strong> ${book.Retail}</p>
+            <div className="book-image-container">
+              <img
+                src={`https://picsum.photos/200/300?random=${book.ISBN}`}
+                alt={book.Title}
+                className="book-image"
+              />
+            </div>
+            <div className="book-info">
+              <h3>{book.Title}</h3>
+              <p><strong>Category:</strong> {book.Category}</p>
+              <p><strong>Price:</strong> ${book.Retail}</p>
+            </div>
           </div>
         ))}
       </div>
