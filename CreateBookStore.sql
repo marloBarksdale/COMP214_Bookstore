@@ -1,0 +1,344 @@
+-- Dropping sequences if they exist
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE customers_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE orders_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE publisher_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE author_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE books_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE orderitems_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP SEQUENCE bookauthor_seq';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN 
+    EXECUTE IMMEDIATE 'DROP INDEX idx_customers_lastname';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN 
+    EXECUTE IMMEDIATE 'DROP INDEX idx_orders_customer';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN 
+    EXECUTE IMMEDIATE 'DROP INDEX idx_books_category';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+    
+
+
+
+-- Dropping tables if they exist
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE BookAuthor CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE OrderItems CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Books CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Author CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Publisher CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Orders CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Customers CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE Book_Audit CASCADE CONSTRAINTS';
+EXCEPTION WHEN OTHERS THEN NULL; END;
+/
+
+
+
+
+-- Creating sequences for primary keys
+
+CREATE SEQUENCE customers_seq START WITH 1001 INCREMENT BY 1;
+CREATE SEQUENCE orders_seq START WITH 2001 INCREMENT BY 1;
+CREATE SEQUENCE publisher_seq START WITH 10 INCREMENT BY 1;
+CREATE SEQUENCE author_seq START WITH 200 INCREMENT BY 1;
+CREATE SEQUENCE books_seq START WITH 300 INCREMENT BY 1;
+CREATE SEQUENCE orderitems_seq START WITH 400 INCREMENT BY 1;
+CREATE SEQUENCE bookauthor_seq START WITH 500 INCREMENT BY 1;
+
+
+
+
+
+
+-- Creating tables
+
+
+CREATE TABLE Book_Audit (
+    AuditID     NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ISBN        VARCHAR2(20),
+    Title       VARCHAR2(200),
+    AddedOn     DATE,
+    AddedBy     VARCHAR2(30)
+);
+
+
+
+CREATE TABLE Customers (
+    Customer# NUMBER(4),
+    LastName VARCHAR2(10) NOT NULL,
+    FirstName VARCHAR2(10) NOT NULL,
+    Address VARCHAR2(50),
+    City VARCHAR2(50),
+    State VARCHAR2(2),
+    Zip VARCHAR2(5),
+    Email VARCHAR2(50),
+    CONSTRAINT customers_customer#_pk PRIMARY KEY (Customer#)
+    
+);
+
+CREATE TABLE Orders (
+    Order# NUMBER(4),
+    Customer# NUMBER(4),
+    OrderDate DATE NOT NULL,
+    ShipDate DATE,
+    ShipStreet VARCHAR2(50),
+    ShipCity VARCHAR2(50),
+    ShipState VARCHAR2(2),
+    ShipZip VARCHAR2(5),
+    ShipCost NUMBER(4,2),
+    CONSTRAINT orders_order#_pk PRIMARY KEY (Order#),
+    CONSTRAINT orders_customer#_fk FOREIGN KEY (Customer#) REFERENCES Customers(Customer#)
+);
+
+CREATE TABLE Publisher (
+    PubID NUMBER(2),
+    Name VARCHAR2(30),
+    Contact VARCHAR2(30),
+    Phone VARCHAR2(20),
+    CONSTRAINT publisher_pubid_pk PRIMARY KEY (PubID)
+);
+
+CREATE TABLE Author (
+    AuthorID VARCHAR2(4),
+    Lname VARCHAR2(10),
+    Fname VARCHAR2(10),
+    CONSTRAINT author_authorid_pk PRIMARY KEY (AuthorID)
+);
+
+CREATE TABLE Books (
+    ISBN VARCHAR2(10),
+    Title VARCHAR2(50),
+    PubDate DATE,
+    PubID NUMBER(2),
+    Cost NUMBER(5,2),
+    Retail NUMBER(5,2),
+    Discount NUMBER(4,2),
+    Category VARCHAR2(25),
+    CONSTRAINT books_isbn_pk PRIMARY KEY (ISBN),
+    CONSTRAINT books_pubid_fk FOREIGN KEY (PubID) REFERENCES Publisher (PubID)
+);
+
+CREATE TABLE OrderItems (
+    Order# NUMBER(4),
+    Item# NUMBER(2),
+    ISBN VARCHAR2(10),
+    Quantity NUMBER(3) NOT NULL,
+    PaidEach NUMBER(5,2) NOT NULL,
+    CONSTRAINT orderitems_pk PRIMARY KEY (Order#, Item#),
+    CONSTRAINT orderitems_order#_fk FOREIGN KEY (Order#) REFERENCES Orders (Order#),
+    CONSTRAINT orderitems_isbn_fk FOREIGN KEY (ISBN) REFERENCES Books (ISBN),
+    CONSTRAINT orderitems_quantity_ck CHECK (Quantity > 0)
+);
+
+CREATE TABLE BookAuthor (
+    ISBN VARCHAR2(10),
+    AuthorID VARCHAR2(4),
+    CONSTRAINT bookauthor_pk PRIMARY KEY (ISBN, AuthorID),
+    CONSTRAINT bookauthor_isbn_fk FOREIGN KEY (ISBN) REFERENCES Books (ISBN),
+    CONSTRAINT bookauthor_authorid_fk FOREIGN KEY (AuthorID) REFERENCES Author (AuthorID)
+);
+
+-- Inserting new customer data
+INSERT INTO CUSTOMERS VALUES (customers_seq.NEXTVAL, 'JOHNSON', 'EMILY', '123 APPLE ST', 'NEW YORK', 'NY', '10001', 'emilyj@gmail.com');
+INSERT INTO CUSTOMERS VALUES (customers_seq.NEXTVAL, 'BROWN', 'DANIEL', '456 OAK AVE', 'LOS ANGELES', 'CA', '90012',  'danbrown@ymail.com');
+INSERT INTO CUSTOMERS VALUES (customers_seq.NEXTVAL, 'MARTIN', 'SOPHIA', '789 MAPLE LN', 'CHICAGO', 'IL', '60601', 'sophiam@outlook.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'NELSON', 'MEGAN', '207 ALEXIS LOAF APT. 296', 'ANDREASTAD', 'OH', '52783', 'fhorne@haley-hartman.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'II', 'MARIO', '130 WARREN CORNER', 'CARLOSTON', 'VA', '66951', 'sara81@williams-chang.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'COLE', 'ERICA', '50108 DARRELL HEIGHTS SUITE 357', 'PAYNEVIEW', 'CT', '65098', 'janeshaw@chambers.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'HERNANDEZ', 'WESLEY', '628 STACY LOCKS SUITE 884', 'JEFFERYMOUTH', 'TX', '15150', 'ericksoncarl@hotmail.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'CUMMINGS', 'SARAH', '95421 DONNA STREETS', 'DAWNTON', 'LA', '76288', 'djames@campbell.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'GONZALEZ', 'JAMES', '60816 WATERS PARKS APT. 775', 'MELISSAVIEW', 'MI', '96090', 'marychang@daniels-morrison.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'KING', 'AMBER', '165 TRAVIS CANYON APT. 418', 'NORTH SAVANNAHMOUTH', 'NJ', '09149', 'william65@hotmail.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'WONG', 'ERIC', '99118 CARROLL RIDGE', 'SOUTH SERGIO', 'ME', '73818', 'gibsonmelissa@hotmail.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'DAVIES', 'BRENDA', '178 SCOTT SHOAL', 'LONGTOWN', 'DE', '03730', 'housealexa@gmail.com');
+INSERT INTO Customers VALUES (customers_seq.NEXTVAL, 'PAYNE', 'JORGE', '4465 HOBBS STREET', 'HESTERVIEW', 'NH', '18176', 'williamskatherine@wilson-kemp.com');
+
+-- Inserting new order data
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1001, TO_DATE('05-MAR-2022','DD-MON-YYYY'), TO_DATE('10-MAR-2022','DD-MON-YYYY'), '123 APPLE ST', 'NEW YORK', 'NY', '10001', 5.00);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1002, TO_DATE('12-JUL-2023','DD-MON-YYYY'), TO_DATE('20-JUL-2023','DD-MON-YYYY'), '456 OAK AVE', 'LOS ANGELES', 'CA', '90012', 6.00);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1003, TO_DATE('22-SEP-2021','DD-MON-YYYY'), TO_DATE('30-SEP-2021','DD-MON-YYYY'), '789 MAPLE LN', 'CHICAGO', 'IL', '60601', 7.00);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1001, TO_DATE('11-NOV-2022','DD-MON-YYYY'), TO_DATE('16-NOV-2022','DD-MON-YYYY'), '123 APPLE ST', 'NEW YORK', 'NY', '10001', 7.08);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1004, TO_DATE('03-AUG-2023','DD-MON-YYYY'), TO_DATE('12-AUG-2023','DD-MON-YYYY'), '9537 BROWN UNDERPASS SUITE 705', 'NORTH BRANDON', 'UT', '37297', 7.79);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1005, TO_DATE('18-MAY-2021','DD-MON-YYYY'), TO_DATE('26-MAY-2021','DD-MON-YYYY'), '703 PRATT LOCK SUITE 547', 'EAST STEVENTON', 'MS', '02930', 12.90);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1002, TO_DATE('09-APR-2024','DD-MON-YYYY'), TO_DATE('17-APR-2024','DD-MON-YYYY'), '46573 SMITH PLACE APT. 488', 'WEST VICTORIASIDE', 'FL', '90958', 8.21);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1006, TO_DATE('27-OCT-2023','DD-MON-YYYY'), TO_DATE('04-NOV-2023','DD-MON-YYYY'), '1976 MATTHEW PINE', 'BENNETTMOUTH', 'IN', '02677', 11.43);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1007, TO_DATE('14-JUN-2022','DD-MON-YYYY'), TO_DATE('21-JUN-2022','DD-MON-YYYY'), '628 STACY LOCKS SUITE 884', 'JEFFERYMOUTH', 'TX', '15150', 14.57);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1003, TO_DATE('01-FEB-2021','DD-MON-YYYY'), TO_DATE('09-FEB-2021','DD-MON-YYYY'), '789 MAPLE LN', 'CHICAGO', 'IL', '60601', 11.88);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1008, TO_DATE('19-AUG-2023','DD-MON-YYYY'), TO_DATE('27-AUG-2023','DD-MON-YYYY'), '95421 DONNA STREETS', 'DAWNTON', 'LA', '76288', 8.70);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1009, TO_DATE('22-DEC-2022','DD-MON-YYYY'), TO_DATE('30-DEC-2022','DD-MON-YYYY'), '60816 WATERS PARKS APT. 775', 'MELISSAVIEW', 'MI', '96090', 7.67);
+INSERT INTO Orders VALUES (orders_seq.NEXTVAL, 1004, TO_DATE('15-JAN-2023','DD-MON-YYYY'), TO_DATE('21-JAN-2023','DD-MON-YYYY'), '32478 CHRISTOPHER ISLANDS', 'JONATHANMOUTH', 'CO', '28836', 10.33);
+
+
+
+-- Inserting new publisher data
+INSERT INTO PUBLISHER VALUES (publisher_seq.NEXTVAL, 'GLOBAL PRINTS', 'SAMUEL CARTER', '800-123-4567');
+INSERT INTO PUBLISHER VALUES (publisher_seq.NEXTVAL, 'BOOK HAVEN', 'LISA HENDERSON', '800-234-5678');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'ANDERSON LLC', 'BRIAN LIU', '(516)601-9401');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'PERRY-VILLANUEVA', 'TINA LOPEZ', '658.691.2048');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'BELL-FITZPATRICK', 'JENNIFER GONZALEZ', '001-539-050-2894');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'PENA AND SONS', 'JUSTIN LARSON', '8855542168');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'BYRD PLC', 'MRS. HANNAH MENDOZA', '(454)764-1293');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'MILLER-MORENO', 'SARAH GRIFFIN', '001-731-385-5957');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'KIM-MOORE', 'DYLAN COOPER', '(833)682-4308');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'HUNTER LLC', 'RYAN CURRY', '836-815-9588');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'STANTON, HAMILTON AND PETERSEN', 'JAMIE COLLINS', '+1-756-896-1165');
+INSERT INTO Publisher VALUES (publisher_seq.NEXTVAL, 'MORGAN, SMITH AND MEYER', 'JONATHAN JONES', '(125)696-5448');
+
+-- Inserting new author data
+INSERT INTO AUTHOR VALUES ('A' || author_seq.NEXTVAL, 'WILLIAMS', 'OLIVIA');
+INSERT INTO AUTHOR VALUES ('A' || author_seq.NEXTVAL, 'TAYLOR', 'JACKSON');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'LLOYD', 'ROBERT');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'MYERS', 'VERONICA');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'ALVAREZ', 'LINDSEY');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'BROWN', 'TERESA');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'HO', 'LAUREN');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'BARTLETT', 'NICOLE');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'LANE', 'DANIEL');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'BARNETT', 'RACHEL');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'LARA', 'LISA');
+INSERT INTO Author VALUES ('A' || author_seq.NEXTVAL, 'ANDERSON', 'VALERIE');
+
+-- Inserting new book data
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The Future of AI', TO_DATE('05-MAR-2024','DD-MON-YYYY'), 14, 25.50, 39.95, NULL, 'Technology');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Modern Cooking', TO_DATE('12-MAY-2012','DD-MON-YYYY'), 17, 18.75, 29.95, NULL, 'Cooking');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Midnight in the Capital', TO_DATE('15-AUG-2008','DD-MON-YYYY'), 10, 14.93, 59.46, 8.57, 'Political Science');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Letters to My Wife', TO_DATE('20-NOV-2004','DD-MON-YYYY'), 11, 13.81, 50.52, 15.87, 'Historical Fiction');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Strategic Choices', TO_DATE('03-SEP-2019','DD-MON-YYYY'), 20, 23.01, 54.78, 5.13, 'Business');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Organizing Innovation', TO_DATE('22-JAN-2003','DD-MON-YYYY'), 15, 17.60, 57.58, 12.94, 'Research');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Cinema Reimagined', TO_DATE('11-JUL-2001','DD-MON-YYYY'), 12, 11.71, 55.22, 2.44, 'Film Studies');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The Sunday Paper', TO_DATE('19-MAR-2020','DD-MON-YYYY'), 19, 29.68, 56.03, 10.79, 'Media and Journalism');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Understanding Inclusion', TO_DATE('06-OCT-2006','DD-MON-YYYY'), 14, 28.75, 45.68, 3.48, 'Sociology');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Election Season', TO_DATE('09-JUN-2014','DD-MON-YYYY'), 10, 28.62, 31.75, 11.24, 'Political Science');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The Mystery Box', TO_DATE('02-FEB-2000','DD-MON-YYYY'), 18, 15.16, 47.64, 5.29, 'Mystery');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Managing Money Today', TO_DATE('17-DEC-2009','DD-MON-YYYY'), 21, 12.21, 44.84, 11.98, 'Finance');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Artificial Intelligence Now', TO_DATE('12-NOV-2017','DD-MON-YYYY'), 14, 27.90, 41.50, NULL, 'Technology');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The Everyday Chef', TO_DATE('08-APR-2006','DD-MON-YYYY'), 17, 15.45, 28.75, NULL, 'Cooking');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Democracy and Power', TO_DATE('01-SEP-2010','DD-MON-YYYY'), 10, 19.80, 52.60, 6.40, 'Political Science');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'A Soldier’s Promise', TO_DATE('27-OCT-2002','DD-MON-YYYY'), 11, 17.25, 48.00, 9.90, 'Historical Fiction');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Winning Strategy', TO_DATE('19-MAY-2016','DD-MON-YYYY'), 20, 21.35, 46.80, 4.85, 'Business');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Research that Changed the World', TO_DATE('03-MAR-2005','DD-MON-YYYY'), 15, 16.95, 55.00, 7.50, 'Research');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Understanding Cinema', TO_DATE('14-JAN-2013','DD-MON-YYYY'), 12, 13.60, 49.75, 3.10, 'Film Studies');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The News Cycle', TO_DATE('25-JUN-2018','DD-MON-YYYY'), 19, 26.40, 58.25, 9.20, 'Media and Journalism');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Sociology for a New Age', TO_DATE('30-AUG-2007','DD-MON-YYYY'), 14, 22.15, 46.90, 5.75, 'Sociology');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'The Campaign Trail', TO_DATE('07-DEC-2001','DD-MON-YYYY'), 10, 20.25, 39.99, 6.99, 'Political Science');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Locked Room Secrets', TO_DATE('18-MAR-2015','DD-MON-YYYY'), 18, 14.95, 50.00, 4.10, 'Mystery');
+INSERT INTO Books VALUES ('B' || books_seq.NEXTVAL, 'Personal Finance Essentials', TO_DATE('21-SEP-2004','DD-MON-YYYY'), 21, 11.80, 38.45, 6.25, 'Finance');
+
+
+
+
+-- Inserting new order items data
+INSERT INTO OrderItems VALUES (2012, 1, 'B310', 4, 42.35);
+INSERT INTO OrderItems VALUES (2002, 1, 'B318', 2, 46.65);
+INSERT INTO OrderItems VALUES (2012, 2, 'B309', 4, 20.51);
+INSERT INTO OrderItems VALUES (2009, 1, 'B300', 5, 39.95);
+INSERT INTO OrderItems VALUES (2003, 1, 'B311', 4, 32.86);
+INSERT INTO OrderItems VALUES (2010, 1, 'B308', 5, 42.20);
+INSERT INTO OrderItems VALUES (2008, 1, 'B302', 3, 50.89);
+INSERT INTO OrderItems VALUES (2002, 2, 'B317', 2, 47.50);
+INSERT INTO OrderItems VALUES (2003, 2, 'B320', 5, 41.15);
+INSERT INTO OrderItems VALUES (2001, 1, 'B310', 2, 42.35);
+INSERT INTO OrderItems VALUES (2003, 3, 'B304', 2, 49.65);
+INSERT INTO OrderItems VALUES (2013, 1, 'B315', 2, 38.10);
+INSERT INTO OrderItems VALUES (2005, 1, 'B302', 2, 50.89);
+INSERT INTO OrderItems VALUES (2012, 3, 'B316', 4, 41.95);
+INSERT INTO OrderItems VALUES (2005, 2, 'B316', 1, 41.95);
+INSERT INTO OrderItems VALUES (2006, 1, 'B305', 1, 44.64);
+INSERT INTO OrderItems VALUES (2012, 4, 'B305', 3, 44.64);
+INSERT INTO OrderItems VALUES (2013, 2, 'B316', 2, 41.95);
+INSERT INTO OrderItems VALUES (2004, 1, 'B322', 4, 45.90);
+INSERT INTO OrderItems VALUES (2008, 2, 'B304', 1, 49.65);
+
+
+-- Inserting new book-author relationships
+INSERT INTO BookAuthor VALUES ('B300', 'A204');
+INSERT INTO BookAuthor VALUES ('B300', 'A205');
+INSERT INTO BookAuthor VALUES ('B301', 'A204');
+INSERT INTO BookAuthor VALUES ('B302', 'A209');
+INSERT INTO BookAuthor VALUES ('B303', 'A200');
+INSERT INTO BookAuthor VALUES ('B303', 'A201');
+INSERT INTO BookAuthor VALUES ('B304', 'A201');
+INSERT INTO BookAuthor VALUES ('B304', 'A206');
+INSERT INTO BookAuthor VALUES ('B305', 'A204');
+INSERT INTO BookAuthor VALUES ('B306', 'A201');
+INSERT INTO BookAuthor VALUES ('B306', 'A211');
+INSERT INTO BookAuthor VALUES ('B307', 'A206');
+INSERT INTO BookAuthor VALUES ('B307', 'A211');
+INSERT INTO BookAuthor VALUES ('B308', 'A207');
+INSERT INTO BookAuthor VALUES ('B308', 'A211');
+INSERT INTO BookAuthor VALUES ('B309', 'A204');
+INSERT INTO BookAuthor VALUES ('B310', 'A204');
+INSERT INTO BookAuthor VALUES ('B310', 'A211');
+INSERT INTO BookAuthor VALUES ('B311', 'A202');
+INSERT INTO BookAuthor VALUES ('B311', 'A209');
+INSERT INTO BookAuthor VALUES ('B312', 'A203');
+INSERT INTO BookAuthor VALUES ('B313', 'A208');
+INSERT INTO BookAuthor VALUES ('B313', 'A210');
+INSERT INTO BookAuthor VALUES ('B314', 'A202');
+INSERT INTO BookAuthor VALUES ('B315', 'A206');
+INSERT INTO BookAuthor VALUES ('B315', 'A211');
+INSERT INTO BookAuthor VALUES ('B316', 'A201');
+INSERT INTO BookAuthor VALUES ('B316', 'A206');
+INSERT INTO BookAuthor VALUES ('B317', 'A208');
+INSERT INTO BookAuthor VALUES ('B318', 'A211');
+INSERT INTO BookAuthor VALUES ('B319', 'A207');
+INSERT INTO BookAuthor VALUES ('B320', 'A200');
+INSERT INTO BookAuthor VALUES ('B321', 'A203');
+INSERT INTO BookAuthor VALUES ('B322', 'A207');
+INSERT INTO BookAuthor VALUES ('B323', 'A205');
+
+
+
+-- Index on Customers table for faster search by LastName
+CREATE INDEX idx_customers_lastname ON Customers(LastName);
+
+-- Index on Orders table to optimize lookups by Customer#
+CREATE INDEX idx_orders_customer ON Orders(Customer#);
+
+-- Index on Books table to speed up searches by Category
+CREATE INDEX idx_books_category ON Books(Category);

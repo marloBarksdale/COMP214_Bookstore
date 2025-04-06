@@ -1,0 +1,127 @@
+create or replace trigger CUSTOMER_DELETE_TRG
+before delete on Customers
+for each row
+DECLARE
+    lv_count number;
+	ex_customer_delete exception;
+BEGIN
+    select count(*) into lv_count
+    from Orders 
+    where Customer# = :OLD.Customer#;
+    
+    if lv_count > 0 then
+        raise_application_error(-20001, 'Customer has existing orders. Cannot delete.');
+    END IF;
+END;
+/
+
+CREATE OR REPLACE TRIGGER APPLY_DISCOUNT_TRG
+BEFORE INSERT OR UPDATE ON OrderItems
+FOR EACH ROW
+DECLARE
+    lv_discount         NUMBER(5,2);
+    lv_retail           NUMBER(5,2);
+    lv_discounted_price NUMBER(5,2);
+BEGIN
+    -- Use NVL to handle NULL discount values
+    SELECT NVL(Discount, 0), Retail
+    INTO lv_discount, lv_retail
+    FROM Books
+    WHERE ISBN = :NEW.ISBN;
+
+    -- Apply discount if any
+    lv_discounted_price := lv_retail - (lv_retail * lv_discount);
+    :NEW.PaidEach := lv_discounted_price;
+
+    DBMS_OUTPUT.PUT_LINE('Applied discount of $' || lv_discount || ' to book in Order ' || :NEW.Order#);
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Book not found for ISBN: ' || :NEW.ISBN);
+        -- Optionally raise an error here to block insert/update
+        -- RAISE_APPLICATION_ERROR(-20010, 'Book not found for discount application.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Trigger Error: ' || SQLERRM);
+END;
+/
+
+
+
+create or replace procedure add_customer(
+    p_LastName  IN Customers.LastName%TYPE,
+    p_FirstName IN Customers.FirstName%TYPE,
+    p_Address   IN Customers.Address%TYPE,
+    p_City      IN Customers.City%TYPE,
+    p_State     IN Customers.State%TYPE,
+    p_Zip       IN Customers.Zip%TYPE,
+    p_Email     IN Customers.Email%TYPE
+)
+as
+BEGIN
+insert into Customers (Customer#, LastName, FirstName, Address, City, State, Zip, Email)
+    values (customers_seq.NEXTVAL, p_LastName, p_FirstName, p_Address, p_City, p_State, p_Zip, p_Email);
+commit;
+
+DBMS_OUTPUT.PUT_LINE('Customer added successfully');
+EXCEPTION
+when others then
+DBMS_OUTPUT.PUT_LINE('Error: ' || sqlerrm);
+END;
+/
+
+create or replace procedure get_order_details(
+    p_order# in orders.order#%TYPE
+)
+as
+lv_customer# orders.customer#%TYPE;
+lv_orderdate orders.orderdate%TYPE;
+lv_shipdate orders.shipdate%TYPE;
+lv_street orders.shipstreet%TYPE;
+lv_city orders.shipcity%TYPE;
+lv_state orders.shipstate%TYPE;
+lv_zip orders.shipzip%TYPE;
+lv_shipcost orders.shipcost%TYPE;
+
+cursor order_items_cursor is
+select b.title, oi.quantity, oi.paideach
+from orderitems oi join books b
+on oi.isbn = b.isbn
+where oi.order# = p_order#;
+
+lv_title books.title%TYPE;
+lv_quantity orderitems.quantity%TYPE;
+lv_paideach orderitems.paideach%TYPE;
+BEGIN
+SELECT customer#, orderdate, shipdate, shipstreet, shipcity, shipstate, shipzip, shipcost
+    INTO lv_customer#, lv_orderdate, lv_shipdate, lv_street, lv_city, lv_state, lv_zip, lv_shipcost
+    FROM Orders
+    WHERE Order# = p_Order#;
+
+DBMS_OUTPUT.PUT_LINE('Order Number: ' || p_order#);
+DBMS_OUTPUT.PUT_LINE('Customer ID: ' || lv_customer#);
+DBMS_OUTPUT.PUT_LINE('Order Date: ' || lv_orderdate);
+DBMS_OUTPUT.PUT_LINE('Shipping Date: ' || lv_shipdate);
+DBMS_OUTPUT.PUT_LINE('Address: ' || lv_street || ', ' || lv_city || ', ' || lv_state || ' ' || lv_zip);
+DBMS_OUTPUT.PUT_LINE('Shipping cost: $' || lv_shipcost);
+
+DBMS_OUTPUT.PUT_LINE('--------------------------------------------');
+DBMS_OUTPUT.PUT_LINE('Items Ordered: ');
+open order_items_cursor;
+loop
+fetch order_items_cursor
+into lv_title, lv_quantity, lv_paideach;
+exit when order_items_cursor%NOTFOUND;
+DBMS_OUTPUT.PUT_LINE('Title: ' || lv_title);
+DBMS_OUTPUT.PUT_LINE('Quantity: ' || lv_quantity);
+DBMS_OUTPUT.PUT_LINE('Price: ' || lv_paideach);
+end loop;
+close order_items_cursor;
+EXCEPTION
+    when others then
+    DBMS_OUTPUT.PUT_LINE('Error: ' || sqlerrm);
+end;
+/
+
+BEGIN
+get_order_details(2001);
+END;
+/

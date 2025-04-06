@@ -1,0 +1,233 @@
+-- Function to count books
+
+CREATE OR REPLACE FUNCTION count_books_by_category(
+    p_category IN VARCHAR2
+) RETURN NUMBER AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM Books
+    WHERE Category = p_category;
+    
+    RETURN v_count;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Error counting books: ' || SQLERRM);
+END;
+/
+
+
+-- function to calculate order total
+CREATE OR REPLACE FUNCTION calculate_order_total(
+    p_order_id IN NUMBER
+) RETURN NUMBER AS
+    v_total NUMBER := 0;
+    v_ship_cost NUMBER := 0;
+BEGIN
+    -- Sum of all items in the order
+    SELECT NVL(SUM(Quantity * PaidEach), 0)
+    INTO v_total
+    FROM OrderItems
+    WHERE Order# = p_order_id;
+    
+    -- Add shipping cost
+    SELECT NVL(ShipCost, 0)
+    INTO v_ship_cost
+    FROM Orders
+    WHERE Order# = p_order_id;
+    
+    RETURN v_total + v_ship_cost;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Error calculating order total: ' || SQLERRM);
+END;
+/
+
+
+
+
+
+-- package
+
+CREATE OR REPLACE PACKAGE bookstore_management AS
+    -- Global constant for max discount percentage
+    g_max_discount CONSTANT NUMBER := 0.20; -- 20%
+    
+    -- Global exception
+    e_invalid_operation EXCEPTION;
+    PRAGMA EXCEPTION_INIT(e_invalid_operation, -20001);
+    
+    -- Procedure to add a new book
+    PROCEDURE add_new_book(
+        p_title IN Books.Title%TYPE,
+        p_pub_date IN Books.PubDate%TYPE,
+        p_pub_id IN Books.PubID%TYPE,
+        p_cost IN Books.Cost%TYPE,
+        p_retail IN Books.Retail%TYPE,
+        p_category IN Books.Category%TYPE,
+        p_isbn OUT Books.ISBN%TYPE
+    );
+    
+    -- Procedure to place a new order
+    PROCEDURE place_order(
+        p_customer_id IN Customers.Customer#%TYPE,
+        p_isbn IN Books.ISBN%TYPE,
+        p_quantity IN OrderItems.Quantity%TYPE,
+        p_order_id OUT Orders.Order#%TYPE
+    );
+    
+    -- Function to get book price
+    FUNCTION get_book_price(
+        p_isbn IN Books.ISBN%TYPE
+    ) RETURN Books.Retail%TYPE;
+    
+    -- Function to count customer orders
+    FUNCTION count_customer_orders(
+        p_customer_id IN Customers.Customer#%TYPE
+    ) RETURN NUMBER;
+    
+    -- Private function (not visible outside package)
+    FUNCTION validate_isbn(p_isbn IN VARCHAR2) RETURN BOOLEAN;
+END bookstore_management;
+/
+
+CREATE OR REPLACE PACKAGE BODY bookstore_management AS
+    -- Private variable to track operations
+    v_operation_count NUMBER := 0;
+    
+    -- Procedure to add a new book
+    PROCEDURE add_new_book(
+        p_title IN Books.Title%TYPE,
+        p_pub_date IN Books.PubDate%TYPE,
+        p_pub_id IN Books.PubID%TYPE,
+        p_cost IN Books.Cost%TYPE,
+        p_retail IN Books.Retail%TYPE,
+        p_category IN Books.Category%TYPE,
+        p_isbn OUT Books.ISBN%TYPE
+    ) IS
+        v_pub_exists NUMBER;
+    BEGIN
+        -- Check if publisher exists
+        SELECT COUNT(*) INTO v_pub_exists
+        FROM Publisher
+        WHERE PubID = p_pub_id;
+        
+        IF v_pub_exists = 0 THEN
+            RAISE e_invalid_operation;
+        END IF;
+        
+        -- Generate new ISBN
+        p_isbn := 'B' || books_seq.NEXTVAL;
+        
+        -- Insert new book
+        INSERT INTO Books (ISBN, Title, PubDate, PubID, Cost, Retail, Category)
+        VALUES (p_isbn, p_title, p_pub_date, p_pub_id, p_cost, p_retail, p_category);
+        
+        v_operation_count := v_operation_count + 1;
+    EXCEPTION
+        WHEN e_invalid_operation THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Publisher does not exist');
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Error adding new book: ' || SQLERRM);
+    END add_new_book;
+    
+    -- Procedure to place a new order
+    PROCEDURE place_order(
+        p_customer_id IN Customers.Customer#%TYPE,
+        p_isbn IN Books.ISBN%TYPE,
+        p_quantity IN OrderItems.Quantity%TYPE,
+        p_order_id OUT Orders.Order#%TYPE
+    ) IS
+        v_customer_exists NUMBER;
+        v_book_exists NUMBER;
+        v_book_price Books.Retail%TYPE;
+    BEGIN
+        -- Validate customer
+        SELECT COUNT(*) INTO v_customer_exists
+        FROM Customers
+        WHERE Customer# = p_customer_id;
+        
+        IF v_customer_exists = 0 THEN
+            RAISE e_invalid_operation;
+        END IF;
+        
+        -- Validate book
+        IF NOT validate_isbn(p_isbn) THEN
+            RAISE e_invalid_operation;
+        END IF;
+        
+        -- Get book price
+        v_book_price := get_book_price(p_isbn);
+        
+        -- Create new order
+        p_order_id := orders_seq.NEXTVAL;
+        
+        INSERT INTO Orders (Order#, Customer#, OrderDate)
+        VALUES (p_order_id, p_customer_id, SYSDATE);
+        
+        -- Add order item
+        INSERT INTO OrderItems (Order#, Item#, ISBN, Quantity, PaidEach)
+        VALUES (p_order_id, 1, p_isbn, p_quantity, v_book_price);
+        
+        v_operation_count := v_operation_count + 1;
+    EXCEPTION
+        WHEN e_invalid_operation THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Invalid customer or book');
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Error placing order: ' || SQLERRM);
+    END place_order;
+    
+    -- Function to get book price
+    FUNCTION get_book_price(
+        p_isbn IN Books.ISBN%TYPE
+    ) RETURN Books.Retail%TYPE IS
+        v_price Books.Retail%TYPE;
+    BEGIN
+        SELECT Retail INTO v_price
+        FROM Books
+        WHERE ISBN = p_isbn;
+        
+        RETURN v_price;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE e_invalid_operation;
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Error getting book price: ' || SQLERRM);
+    END get_book_price;
+    
+    -- Function to count customer orders
+    FUNCTION count_customer_orders(
+        p_customer_id IN Customers.Customer#%TYPE
+    ) RETURN NUMBER IS
+        v_order_count NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_order_count
+        FROM Orders
+        WHERE Customer# = p_customer_id;
+        
+        RETURN v_order_count;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Error counting orders: ' || SQLERRM);
+    END count_customer_orders;
+    
+    -- Private function to validate ISBN
+    FUNCTION validate_isbn(p_isbn IN VARCHAR2) RETURN BOOLEAN IS
+        v_count NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_count
+        FROM Books
+        WHERE ISBN = p_isbn;
+        
+        RETURN (v_count > 0);
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN FALSE;
+    END validate_isbn;
+END bookstore_management;
+/
