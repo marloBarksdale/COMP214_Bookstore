@@ -61,6 +61,7 @@ function AddBookPage() {
         handleChange={handleChange}
         handleSubmit={handleSubmit}
       />
+      <h1>Your Books: </h1>
       <BookGrid books={books} />
     </Container>
   );

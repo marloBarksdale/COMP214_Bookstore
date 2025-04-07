@@ -123,11 +123,15 @@ export const Card = styled.div`
 export const BookCover = styled.div`
   height: 200px;
   background-color: #f9f9f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-weight: bold;
+  overflow: hidden;  // Add this
+  position: relative;  // Add this
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;  // This ensures images maintain aspect ratio
+    display: block;  // Remove extra space under image
+  }
 `;
 
 export const BookInfo = styled.div`

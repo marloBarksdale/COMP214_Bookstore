@@ -6,7 +6,7 @@ const BookCard = ({ book }) => {
   return (
     <Card>
       <Link to={`/book/${book.ISBN}`} style={{ textDecoration: 'none' }}>
-        <BookCover>{book.Title.substring(0, 2)}</BookCover>
+        <BookCover><img src={book.image} alt="" /></BookCover>
         <BookInfo>
           <BookTitle>{book.Title}</BookTitle>
           <BookMeta>By {book.Author}</BookMeta>
