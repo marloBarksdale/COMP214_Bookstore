@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import SearchBar from '../components/SearchBar';
 import CategoryFilter from '../components/CategoryFilter';
 import BookGrid from '../components/BookGrid';
+import img1 from '../assets/img1.jpg';
+import img2 from '../assets/img2.png';
+import img3 from '../assets/img3.jpeg';
+import img4 from '../assets/img4.png';
 
 // Mock data for the homepage
 const mockBooks = [
@@ -15,7 +19,8 @@ const mockBooks = [
     Discount: null,
     Category: 'TECHNOLOGY',
     Author: 'OLIVIA WILLIAMS',
-    Publisher: 'GLOBAL PRINTS'
+    Publisher: 'GLOBAL PRINTS',
+    image: img2
   },
   {
     ISBN: 'B301',
@@ -27,7 +32,8 @@ const mockBooks = [
     Discount: null,
     Category: 'COOKING',
     Author: 'JACKSON TAYLOR',
-    Publisher: 'BOOK HAVEN'
+    Publisher: 'BOOK HAVEN',
+    image: img3
   },
   {
     ISBN: 'B302',
@@ -39,7 +45,8 @@ const mockBooks = [
     Discount: 5.00,
     Category: 'TECHNOLOGY',
     Author: 'OLIVIA WILLIAMS',
-    Publisher: 'GLOBAL PRINTS'
+    Publisher: 'GLOBAL PRINTS',
+    image: img4
   },
   {
     ISBN: 'B303',
@@ -51,7 +58,8 @@ const mockBooks = [
     Discount: null,
     Category: 'FICTION',
     Author: 'JACKSON TAYLOR',
-    Publisher: 'BOOK HAVEN'
+    Publisher: 'BOOK HAVEN',
+    image: img1
   }
 ];
 
